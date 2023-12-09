@@ -132,8 +132,9 @@ stateDiagram-v2
 ```
 
 where we basically resolve `www.youtube.com` using two DNS resolvers, then
-deduplicate addresses and arrange to test `80/tcp`, `443/tcp`, and `443/udp`
-while making sure we make a single HTTP request per port.
+deduplicate addresses (`DedupAddrs`) and copy the addresses (using `TeeAddrs`)
+such that we test `80/tcp`, `443/tcp`, and `443/udp` while making sure
+we make a single HTTP request per port.
 
 The corresponding JavaScript implementation of the above DSL is:
 
