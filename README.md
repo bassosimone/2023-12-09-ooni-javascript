@@ -2,7 +2,7 @@
 
 This repository implements an experimental JavaScript console for OONI Probe.
 
-This repository requires exactly Go 1.20.11 mentioned. Using a different version of Go may work
+This repository requires exactly Go 1.20.11. Using a different version of Go may work
 as intended but is not recommended: we depend on packages forked from the standard library; so, it
 is more robust to use the same version of Go from which we forked those packages from.
 
