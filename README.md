@@ -91,6 +91,99 @@ save it as `main.js` and run it using:
 ./jsconsole main.js
 ```
 
+You can also experiment with creating and executing DSLs for performing
+OONI measurements directly. For example, considering this experiment definition:
+
+```mermaid
+stateDiagram-v2
+  state "Getaddrinfo('www.youtube.com')" as Getaddrinfo
+  state "DNSLookupUDP('www.youtube.com')" as DNSLookupUDP
+  Getaddrinfo --> DedupAddrs
+  DNSLookupUDP --> DedupAddrs
+  DedupAddrs --> TeeAddrs
+
+  state "MakeEndpoints(80/tcp)" as MakeEndpoints80TCP
+  TeeAddrs --> MakeEndpoints80TCP
+  state "MakeEndpoints(443/tcp)" as MakeEndpoints443TCP
+  TeeAddrs --> MakeEndpoints443TCP
+  state "MakeEndpoints(443/udp)" as MakeEndpoints443UDP
+  TeeAddrs --> MakeEndpoints443UDP
+
+  state "TCPConnect" as TCPConnect80
+  MakeEndpoints80TCP --> TCPConnect80
+  state "TakeN 1" as TakeN80
+  TCPConnect80 --> TakeN80
+  state "HTTPRoundTrip" as HTTPRoundTrip80
+  TakeN80 --> HTTPRoundTrip80
+
+  state "TCPConnect" as TCPConnect443
+  MakeEndpoints443TCP --> TCPConnect443
+  TCPConnect443 --> TLSHandshake
+  state "TakeN 1" as TakeN443TCP
+  TLSHandshake --> TakeN443TCP
+  state "HTTPRoundTrip" as HTTPRoundTrip443TCP
+  TakeN443TCP --> HTTPRoundTrip443TCP
+
+  MakeEndpoints443UDP --> QUICHandshake
+  state "TakeN 1" as TakeN443UDP
+  QUICHandshake --> TakeN443UDP
+  state "HTTPRoundTrip" as HTTPRoundTrip443UDP
+  TakeN443UDP --> HTTPRoundTrip443UDP
+```
+
+where we basically resolve `www.youtube.com` using two DNS resolvers, then
+deduplicate addresses and arrange to test `80/tcp`, `443/tcp`, and `443/udp`
+while making sure we make a single HTTP request per adddress.
+
+The corresponding JavaScript implementation of the above DSL is:
+
+```JavaScript
+"use strict"
+
+const dsl = require("ooni/dsl")
+const time = require("golang/time")
+
+const builder = new dsl.Builder()
+
+// implement the DNS lookup part of the DSL
+const addresses = builder.dedupAddrs(
+	builder.dnsLookupUdp("www.youtube.com"),
+	builder.getaddrinfo("www.youtube.com"),
+)
+
+// implement the 80/tcp pipeline
+function port80tcp(addresses) {
+	const endpoints = builder.makeEndpoints("80", addresses)
+	const conns = builder.tcpConnect(endpoints)
+	builder.httpRoundTrip("www.youtube.com", builder.takeN(1, conns))
+}
+
+// implement the 443/tcp pipeline
+function port443tcp(addresses) {
+	const endpoints = builder.makeEndpoints("443", addresses)
+	const conns = builder.tcpConnect(endpoints)
+	const tlsConns = builder.tlsHandshake("www.youtube.com", ["h2", "http1/1.1"], conns)
+	builder.httpRoundTrip("www.youtube.com", builder.takeN(1, tlsConns))
+}
+
+// implement the 443/udp pipeline
+function port443udp(addresses) {
+	const endpoints = builder.makeEndpoints("443", addresses)
+	const conns = builder.quicHandshake("www.youtube.com", ["h3"], endpoints)
+	builder.httpRoundTrip("www.youtube.com", builder.takeN(1, conns))
+}
+
+// tie it all together
+builder.teeAddrs(addresses, port80tcp, port443tcp, port443udp)
+
+// build and execute the DSL
+const root = builder.buildRootNode()
+const now = time.now()
+const tk = dsl.run(root, now)
+
+console.log(JSON.stringify(tk))
+```
+
 ## Repository structure
 
 We use [ooni/probe-engine](https://github.com/ooni/probe-engine) to import
