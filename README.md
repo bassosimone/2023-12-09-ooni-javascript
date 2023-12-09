@@ -87,6 +87,6 @@ console.log(signal.run())
 
 save it as `main.js` and run it using:
 
-```console
+```bash
 ./jsconsole main.js
 ```
