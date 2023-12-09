@@ -11,7 +11,7 @@ is more robust to use the same version of Go from which we forked those packages
 The following commands show how to setup a development environment using Debian 12 ("bookworm"). The
 same instructions should also work for Debian-based distribution (e.g., Ubuntu).
 
-```console
+```bash
 # install the compilers, git, and the root CA
 sudo apt install golang build-essential ca-certificates git
 
@@ -29,7 +29,7 @@ $HOME/go/bin/go1.20.11 download
 
 The following commands show how to setup a development environment using Fedora.
 
-```console
+```bash
 # install the compilers and git
 sudo dnf install golang make gcc gcc-c++ git
 
@@ -50,7 +50,7 @@ have already installed Homebrew, which should also install the Xcode command lin
 
 Then, you need to follow these instructions:
 
-```console
+```bash
 # install the compiler
 brew install go
 
@@ -65,7 +65,7 @@ $HOME/go/bin/go1.20.11 download
 
 Once you have installed the correct Go version and a C compiler, you can compile using:
 
-```console
+```bash
 $HOME/go/bin/go1.20.11 build -v -ldflags '-s -w' ./cmd/jsconsole
 ```
 
