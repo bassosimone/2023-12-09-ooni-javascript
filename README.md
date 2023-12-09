@@ -90,3 +90,29 @@ save it as `main.js` and run it using:
 ```bash
 ./jsconsole main.js
 ```
+
+## Repository structure
+
+We use [ooni/probe-engine](https://github.com/ooni/probe-engine) to import
+internal OONI Probe packages. We implement these [internal](internal) packages:
+
+* [dslvm](internal/dslvm/): low-level DSL implementation;
+* [dslengine](internal/dslengine/): engine for running the low-level DSL;
+* [dsljson](internal/dsljson/): JSON representation for the DSL;
+* [dsljavascript](internal/dsljavascript/): JavaScript DSL implementation.
+
+We use [dop251/goja](https://github.com/dop251/goja) as the JavaScript engine.
+
+The [javascript](javascript) directory contains JavaScript code:
+
+* [javascript/golang](javascript/golang/) contains wrappers to invoke
+Go functions from JavaScript;
+
+* [javascript/ooni/experiment](javascript/ooni/experiment/) contains
+the JavaScript implementation of OONI experiments;
+
+* [javascript/ooni/analysis.js](javascript/ooni/analysis.js) implements
+analyzing OONI measurements;
+
+* [javascript/ooni/dsl.js](javascript/ooni/dsl.js) allows to create
+and run a JSON-encoded DSL using JavaScript code.
