@@ -6,10 +6,10 @@ This repository requires exactly Go 1.20.11. Using a different version of Go may
 as intended but is not recommended: we depend on packages forked from the standard library; so, it
 is more robust to use the same version of Go from which we forked those packages from.
 
+## Debian developer setup
+
 The following commands show how to setup a development environment using Debian 12 ("bookworm"). The
 same instructions should also work for Debian-based distribution (e.g., Ubuntu).
-
-## Debian developer setup
 
 ```console
 # install the compilers, git, and the root CA
