@@ -2,9 +2,8 @@
 
 This repository implements an experimental JavaScript console for OONI Probe.
 
-This repository requires exactly Go 1.20.11. Using a different version of Go may work
-as intended but is not recommended: we depend on packages forked from the standard library; so, it
-is more robust to use the same version of Go from which we forked those packages from.
+This repository requires Go >= 1.20.12. Using an higher version of Go is possible
+and should work. Using a lower version is not recommended.
 
 ## Debian developer setup
 
@@ -19,10 +18,10 @@ sudo apt install golang build-essential ca-certificates git
 sudo apt install mingw-w64
 
 # install the required go version binary
-go install -v golang.org/dl/go1.20.11@latest
+go install -v golang.org/dl/go1.20.12@latest
 
 # fetch the whole go distribution
-$HOME/go/bin/go1.20.11 download
+$HOME/go/bin/go1.20.12 download
 ```
 
 ## Fedora developer setup
@@ -37,10 +36,10 @@ sudo dnf install golang make gcc gcc-c++ git
 sudo dnf install mingw64-gcc mingw64-gcc-c++
 
 # install the required go version binary
-go install -v golang.org/dl/go1.20.11@latest
+go install -v golang.org/dl/go1.20.12@latest
 
 # fetch the whole go distribution
-$HOME/go/bin/go1.20.11 download
+$HOME/go/bin/go1.20.12 download
 ```
 
 ## macOS developer setup
@@ -55,10 +54,10 @@ Then, you need to follow these instructions:
 brew install go
 
 # install the required go version binary
-go install -v golang.org/dl/go1.20.11@latest
+go install -v golang.org/dl/go1.20.12@latest
 
 # fetch the whole go distribution
-$HOME/go/bin/go1.20.11 download
+$HOME/go/bin/go1.20.12 download
 ```
 
 ## Build instructions
@@ -66,7 +65,7 @@ $HOME/go/bin/go1.20.11 download
 Once you have installed the correct Go version and a C compiler, you can compile using:
 
 ```bash
-$HOME/go/bin/go1.20.11 build -v -ldflags '-s -w' ./cmd/jsconsole
+$HOME/go/bin/go1.20.12 build -v -ldflags '-s -w' ./cmd/jsconsole
 ```
 
 This command will generate a stripped binary called `jsconsole` in the toplevel directory.
@@ -188,12 +187,12 @@ console.log(JSON.stringify(tk))
 ## Repository structure
 
 We use [ooni/probe-engine](https://github.com/ooni/probe-engine) to import
-internal OONI Probe packages. We implement these [internal](internal) packages:
+internal OONI Probe packages. We import these packages:
 
-* [dslvm](internal/dslvm/): low-level DSL implementation;
-* [dslengine](internal/dslengine/): engine for running the low-level DSL;
-* [dsljson](internal/dsljson/): JSON representation for the DSL;
-* [dsljavascript](internal/dsljavascript/): JavaScript DSL implementation.
+* [dslvm](https://github.com/ooni/probe-engine/tree/v0.27.0/pkg/x/dslvm): low-level DSL implementation;
+* [dslengine](https://github.com/ooni/probe-engine/tree/v0.27.0/pkg/x/dslengine): engine for running the low-level DSL;
+* [dsljson](https://github.com/ooni/probe-engine/tree/v0.27.0/pkg/x/dsljson): JSON representation for the DSL;
+* [dsljavascript](https://github.com/ooni/probe-engine/tree/v0.27.0/pkg/x/dsljavascript): JavaScript DSL implementation.
 
 We use [dop251/goja](https://github.com/dop251/goja) as the JavaScript engine.
 
