@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/apex/log"
-	"github.com/bassosimone/2023-12-09-ooni-javascript/internal/dsljavascript"
 	"github.com/ooni/probe-engine/pkg/runtimex"
+	"github.com/ooni/probe-engine/pkg/x/dsljavascript"
 )
 
 func main() {
