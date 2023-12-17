@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.WebObservationsContainter = exports.WebObservation = void 0;
+exports.sortByTypeAndFailure = exports.filterByTargetTag = exports.WebObservationsContainter = exports.WebObservation = void 0;
 /** The last operation in a WebOservation is DNS lookup. */
 var TypeDNSLookup = 0;
 /** The last operation in a WebOservation is TCP connect. */
@@ -9,8 +9,6 @@ var TypeTCPConnect = 1;
 var TypeTLSHandshake = 2;
 /** The last operation in a WebOservation is HTTP round trip. */
 var TypeHTTPRoundTrip = 3;
-// TODO(bassosimone): implement linear analysis and sorting using the
-// custom sorting functionlity in Array.prototype.sort.
 /** Observation of a web measurement including DNS, TCP, TLS, QUIC, and HTTP. */
 var WebObservation = /** @class */ (function () {
     function WebObservation() {
@@ -264,6 +262,84 @@ var WebObservationsContainter = /** @class */ (function () {
             //obs.httpResponseIsFinal = utilsDetermineWhetherHTTPResponseIsFinal(ev.Response.Code)
         }
     };
+    /** Returns an array containing observations in random order. */
+    WebObservationsContainter.prototype.linearize = function () {
+        var output = [];
+        for (var _i = 0, _a = this.dnsLookupFailures; _i < _a.length; _i++) {
+            var entry = _a[_i];
+            output.push(entry);
+        }
+        // TODO(bassosimone): should we include successes here? Wouldn't it be
+        // actually redundant to include them into the returned value?
+        {
+            var source = this.knownTcpEndpoints;
+            for (var _b = 0, _c = Object.keys(source); _b < _c.length; _b++) {
+                var key = _c[_b];
+                if (!source.hasOwnProperty(key)) {
+                    continue;
+                }
+                var value = source[key]; // we know it's a number!
+                output.push(value);
+            }
+        }
+        return output;
+    };
     return WebObservationsContainter;
 }());
 exports.WebObservationsContainter = WebObservationsContainter;
+/** Returns only WebObservations using the given target tag. */
+function filterByTargetTag(input, tag) {
+    var output = [];
+    for (var _i = 0, input_1 = input; _i < input_1.length; _i++) {
+        var entry = input_1[_i];
+        if (entry.tagTarget === tag) {
+            output.push(entry);
+        }
+    }
+    return output;
+}
+exports.filterByTargetTag = filterByTargetTag;
+/**
+ * Complex sorting of linear observations. We first divide the input
+ * list in groups identified by their type such that all the equal types
+ * are in a group. Within each group, we then sort by failure so that
+ * null appears before actual failures.
+ */
+function sortByTypeAndFailure(input) {
+    // Utility function to reduce a null failure to an empty string
+    function failurefilter(input) {
+        if (input === null) {
+            return "";
+        }
+        return input;
+    }
+    // Utility function to map the undefined transaction ID to the 0 value
+    function txidfilter(input) {
+        if (input === undefined) {
+            return 0;
+        }
+        return input;
+    }
+    // TODO(bassosimone): write unit tests for this function!
+    input.sort(function (a, b) {
+        // sort by Type
+        if (a.type > b.type) {
+            return -1; // result: [a, b]
+        }
+        if (a.type < b.type) {
+            return 1; // result: [b, a]
+        }
+        // sort by Failure
+        if (failurefilter(a.failure) < failurefilter(b.failure)) {
+            return -1; // result: [a, b]
+        }
+        if (failurefilter(a.failure) > failurefilter(b.failure)) {
+            return 1; // result: [b, a]
+        }
+        // undocumented but important to have consistent ordering
+        // which helps when running unit tests. This sorting is such
+        // that transactions with undefined ID sort as last.
+        return txidfilter(b.transactionId) - txidfilter(a.transactionId);
+    });
+}
+exports.sortByTypeAndFailure = sortByTypeAndFailure;

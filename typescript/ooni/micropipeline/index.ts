@@ -12,9 +12,6 @@ const TypeTLSHandshake = 2
 /** The last operation in a WebOservation is HTTP round trip. */
 const TypeHTTPRoundTrip = 3
 
-// TODO(bassosimone): implement linear analysis and sorting using the
-// custom sorting functionlity in Array.prototype.sort.
-
 /** Observation of a web measurement including DNS, TCP, TLS, QUIC, and HTTP. */
 export class WebObservation {
 	// Common fields
@@ -102,13 +99,13 @@ export class WebObservation {
 
 /** Utility function to get the target= tag given the list of tags. */
 function getTargetTag(tags?: string[] | null): string | null {
-    for (const tag of (tags || [])) {
-        if (tag.indexOf("target=", 0) !== 0) {
-            continue
-        }
-        return tag.replace(/^target=/, "")
-    }
-    return null
+	for (const tag of (tags || [])) {
+		if (tag.indexOf("target=", 0) !== 0) {
+			continue
+		}
+		return tag.replace(/^target=/, "")
+	}
+	return null
 }
 
 /** Utility function to join an address and a port. */
@@ -118,7 +115,6 @@ function netJoinHostPort(address: string, port: string): string {
 	}
 	return `${address}:${port}`
 }
-
 
 /** Map between a transaction ID and the corresponding observation. */
 export type TransactionIdToWebObservation = { [key: number]: WebObservation }
@@ -336,4 +332,89 @@ export class WebObservationsContainter {
 			//obs.httpResponseIsFinal = utilsDetermineWhetherHTTPResponseIsFinal(ev.Response.Code)
 		}
 	}
+
+	/** Returns an array containing observations in random order. */
+	linearize(): WebObservation[] {
+		const output: WebObservation[] = []
+
+		for (const entry of this.dnsLookupFailures) {
+			output.push(entry)
+		}
+
+		// TODO(bassosimone): should we include successes here? Wouldn't it be
+		// actually redundant to include them into the returned value?
+
+		{
+			const source = this.knownTcpEndpoints
+			for (const key of Object.keys(source)) {
+				if (!source.hasOwnProperty(key)) {
+					continue
+				}
+				const value = source[key as unknown as number] // we know it's a number!
+				output.push(value)
+			}
+		}
+
+		return output
+	}
+}
+
+/** Returns only WebObservations using the given target tag. */
+export function filterByTargetTag(input: WebObservation[], tag: string): WebObservation[] {
+	const output: WebObservation[] = []
+	for (const entry of input) {
+		if (entry.tagTarget === tag) {
+			output.push(entry)
+		}
+	}
+	return output
+}
+
+/**
+ * Complex sorting of linear observations. We first divide the input
+ * list in groups identified by their type such that all the equal types
+ * are in a group. Within each group, we then sort by failure so that
+ * null appears before actual failures.
+ */
+export function sortByTypeAndFailure(input: WebObservation[]) {
+	// Utility function to reduce a null failure to an empty string
+	function failurefilter(input: string | null): string {
+		if (input === null) {
+			return ""
+		}
+		return input
+	}
+
+	// Utility function to map the undefined transaction ID to the 0 value
+	function txidfilter(input?: number): number {
+		if (input === undefined) {
+			return 0
+		}
+		return input
+	}
+
+	// TODO(bassosimone): write unit tests for this function!
+
+	input.sort(function (a: WebObservation, b: WebObservation): number {
+		// sort by Type
+		if (a.type > b.type) {
+			return -1 // result: [a, b]
+		}
+		if (a.type < b.type) {
+			return 1 // result: [b, a]
+		}
+
+		// sort by Failure
+		if (failurefilter(a.failure) < failurefilter(b.failure)) {
+			return -1 // result: [a, b]
+		}
+		if (failurefilter(a.failure) > failurefilter(b.failure)) {
+			return 1 // result: [b, a]
+		}
+
+		// undocumented but important to have consistent ordering
+		// which helps when running unit tests. This sorting is such
+		// that transactions with undefined ID sort as last.
+		return txidfilter(b.transactionId) - txidfilter(a.transactionId)
+	})
 }
