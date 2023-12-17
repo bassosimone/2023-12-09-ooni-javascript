@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.newDefaultRicherInput = exports.HttpsTarget = exports.RicherInput = void 0;
+exports.loadRicherInputOrUseDefault = exports.HttpsTarget = exports.RicherInput = void 0;
 /** Contains richer input for signal. */
 var RicherInput = /** @class */ (function () {
     function RicherInput() {
@@ -45,4 +45,12 @@ function newDefaultRicherInput() {
     }
     return input;
 }
-exports.newDefaultRicherInput = newDefaultRicherInput;
+/** Loads richer input from a string, if not empty, or uses the default. */
+function loadRicherInputOrUseDefault(rawInput) {
+    if (rawInput === "") {
+        return newDefaultRicherInput();
+    }
+    var object = JSON.parse(rawInput);
+    return object;
+}
+exports.loadRicherInputOrUseDefault = loadRicherInputOrUseDefault;

@@ -39,9 +39,9 @@ function analyze(input, testKeys) {
     console.log("signal_backend_failure: ".concat(testKeys.signal_backend_failure));
 }
 /** Runs the signal experiment and returns JSON serialized test keys. */
-function run() {
+function run(rawInput) {
     // create default richer input
-    var input = (0, richerinput_1.newDefaultRicherInput)();
+    var input = (0, richerinput_1.loadRicherInputOrUseDefault)(rawInput);
     // measure
     var testKeys = measure(input);
     // analyze

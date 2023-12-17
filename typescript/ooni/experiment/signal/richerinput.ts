@@ -66,7 +66,7 @@ const defaultHttpsTargets: HttpsTarget[] = [
 ]
 
 /** Factory that creates the default RicherInput for signal. */
-export function newDefaultRicherInput(): RicherInput {
+function newDefaultRicherInput(): RicherInput {
 	const input = new RicherInput()
 
 	// make sure we use the default cert
@@ -78,4 +78,13 @@ export function newDefaultRicherInput(): RicherInput {
 	}
 
 	return input
+}
+
+/** Loads richer input from a string, if not empty, or uses the default. */
+export function loadRicherInputOrUseDefault(rawInput: string): RicherInput {
+	if (rawInput === "") {
+		return newDefaultRicherInput()
+	}
+	const object = JSON.parse(rawInput)
+	return object as RicherInput
 }

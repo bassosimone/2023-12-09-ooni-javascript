@@ -4,7 +4,7 @@ import { now as timeNow } from "../../../golang/time"
 
 import { WebObservationsContainter, } from "../../micropipeline"
 
-import { RicherInput, newDefaultRicherInput } from "./richerinput"
+import { RicherInput, loadRicherInputOrUseDefault } from "./richerinput"
 
 import { generateDsl } from "./generatedsl"
 
@@ -46,9 +46,9 @@ function analyze(input: RicherInput, testKeys: TestKeys) {
 }
 
 /** Runs the signal experiment and returns JSON serialized test keys. */
-export function run() {
+export function run(rawInput: string): string {
 	// create default richer input
-	const input = newDefaultRicherInput()
+	const input = loadRicherInputOrUseDefault(rawInput)
 
 	// measure
 	const testKeys = measure(input)
