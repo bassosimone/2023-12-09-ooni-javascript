@@ -20,6 +20,8 @@ var dsl_1 = require("../../dsl");
 var time_1 = require("../../../golang/time");
 var archival_1 = require("../../model/archival");
 var micropipeline_1 = require("../../micropipeline");
+var richerinput_1 = require("./richerinput");
+var generatedsl_1 = require("./generatedsl");
 /** Returns the signal experiment name. */
 function experimentName() {
     return "signal";
@@ -30,47 +32,18 @@ function experimentVersion() {
     return "0.3.0";
 }
 exports.experimentVersion = experimentVersion;
-var signalCANew = "\n-----BEGIN CERTIFICATE-----\nMIIF2zCCA8OgAwIBAgIUAMHz4g60cIDBpPr1gyZ/JDaaPpcwDQYJKoZIhvcNAQEL\nBQAwdTELMAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWExFjAUBgNVBAcT\nDU1vdW50YWluIFZpZXcxHjAcBgNVBAoTFVNpZ25hbCBNZXNzZW5nZXIsIExMQzEZ\nMBcGA1UEAxMQU2lnbmFsIE1lc3NlbmdlcjAeFw0yMjAxMjYwMDQ1NTFaFw0zMjAx\nMjQwMDQ1NTBaMHUxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9ybmlhMRYw\nFAYDVQQHEw1Nb3VudGFpbiBWaWV3MR4wHAYDVQQKExVTaWduYWwgTWVzc2VuZ2Vy\nLCBMTEMxGTAXBgNVBAMTEFNpZ25hbCBNZXNzZW5nZXIwggIiMA0GCSqGSIb3DQEB\nAQUAA4ICDwAwggIKAoICAQDEecifxMHHlDhxbERVdErOhGsLO08PUdNkATjZ1kT5\n1uPf5JPiRbus9F4J/GgBQ4ANSAjIDZuFY0WOvG/i0qvxthpW70ocp8IjkiWTNiA8\n1zQNQdCiWbGDU4B1sLi2o4JgJMweSkQFiyDynqWgHpw+KmvytCzRWnvrrptIfE4G\nPxNOsAtXFbVH++8JO42IaKRVlbfpe/lUHbjiYmIpQroZPGPY4Oql8KM3o39ObPnT\no1WoM4moyOOZpU3lV1awftvWBx1sbTBL02sQWfHRxgNVF+Pj0fdDMMFdFJobArrL\nVfK2Ua+dYN4pV5XIxzVarSRW73CXqQ+2qloPW/ynpa3gRtYeGWV4jl7eD0PmeHpK\nOY78idP4H1jfAv0TAVeKpuB5ZFZ2szcySxrQa8d7FIf0kNJe9gIRjbQ+XrvnN+ZZ\nvj6d+8uBJq8LfQaFhlVfI0/aIdggScapR7w8oLpvdflUWqcTLeXVNLVrg15cEDwd\nlV8PVscT/KT0bfNzKI80qBq8LyRmauAqP0CDjayYGb2UAabnhefgmRY6aBE5mXxd\nbyAEzzCS3vDxjeTD8v8nbDq+SD6lJi0i7jgwEfNDhe9XK50baK15Udc8Cr/ZlhGM\njNmWqBd0jIpaZm1rzWA0k4VwXtDwpBXSz8oBFshiXs3FD6jHY2IhOR3ppbyd4qRU\npwIDAQABo2MwYTAOBgNVHQ8BAf8EBAMCAQYwDwYDVR0TAQH/BAUwAwEB/zAdBgNV\nHQ4EFgQUtfNLxuXWS9DlgGuMUMNnW7yx83EwHwYDVR0jBBgwFoAUtfNLxuXWS9Dl\ngGuMUMNnW7yx83EwDQYJKoZIhvcNAQELBQADggIBABUeiryS0qjykBN75aoHO9bV\nPrrX+DSJIB9V2YzkFVyh/io65QJMG8naWVGOSpVRwUwhZVKh3JVp/miPgzTGAo7z\nhrDIoXc+ih7orAMb19qol/2Ha8OZLa75LojJNRbZoCR5C+gM8C+spMLjFf9k3JVx\ndajhtRUcR0zYhwsBS7qZ5Me0d6gRXD0ZiSbadMMxSw6KfKk3ePmPb9gX+MRTS63c\n8mLzVYB/3fe/bkpq4RUwzUHvoZf+SUD7NzSQRQQMfvAHlxk11TVNxScYPtxXDyiy\n3Cssl9gWrrWqQ/omuHipoH62J7h8KAYbr6oEIq+Czuenc3eCIBGBBfvCpuFOgckA\nXXE4MlBasEU0MO66GrTCgMt9bAmSw3TrRP12+ZUFxYNtqWluRU8JWQ4FCCPcz9pg\nMRBOgn4lTxDZG+I47OKNuSRjFEP94cdgxd3H/5BK7WHUz1tAGQ4BgepSXgmjzifF\nT5FVTDTl3ZnWUVBXiHYtbOBgLiSIkbqGMCLtrBtFIeQ7RRTb3L+IE9R0UB0cJB3A\nXbf1lVkOcmrdu2h8A32aCwtr5S1fBF1unlG7imPmqJfpOMWa8yIF/KWVm29JAPq8\nLrsybb0z5gg8w7ZblEuB9zOW9M3l60DXuJO6l7g+deV6P96rv2unHS8UlvWiVWDy\n9qfgAJizyy3kqM4lOwBH\n-----END CERTIFICATE-----";
-function generateDslForHTTPS(builder, domain, tag) {
-    // properly transform the tag into a key=value format
-    tag = "target=".concat(tag);
-    // obtain IP addrs from the domain name
-    var addrs = builder.getaddrinfo(domain, (0, dsl_1.getaddrinfoOptionTags)(tag));
-    // map addrs to endpoints
-    var endpoints = builder.makeEndpoints("443", addrs);
-    // establish TCP connections
-    var tcpConnections = builder.tcpConnect(endpoints, (0, dsl_1.tcpConnectOptionTags)(tag));
-    // perform TLS handshakes with the custom root CAs
-    var tlsConnections = builder.tlsHandshake(domain, ["h2", "http/1.1"], tcpConnections, (0, dsl_1.tlsHandshakeOptionRootCAs)(signalCANew));
-    // make sure we use juse a single connection for the HTTP round trip
-    var firstConn = builder.takeN(1, tlsConnections);
-    // perform HTTP round trips
-    builder.httpRoundTrip(domain, firstConn);
-}
-function generateDSLForUptime(builder) {
-    // obtain IP adds from the domain name
-    var addrs = builder.getaddrinfo("uptime.signal.org");
-    // drop the results since we don't need to do anything with them
-    builder.drop(addrs);
-}
+// TODO(bassosimone): we should use richer input here
 var tagTargetCdsi = "cdsi";
 var tagTargetChat = "chat";
 var tagTargetSfuVoip = "sfu_voip";
 var tagTargetStorage = "storage";
 function measure() {
-    // create the builder
-    var builder = new dsl_1.Builder();
-    // build DSL for HTTPS
-    generateDslForHTTPS(builder, "cdsi.signal.org", tagTargetCdsi);
-    generateDslForHTTPS(builder, "chat.signal.org", tagTargetChat);
-    generateDslForHTTPS(builder, "sfu.voip.signal.org", tagTargetSfuVoip);
-    generateDslForHTTPS(builder, "storage.signal.org", tagTargetStorage);
-    // build DSL for uptime.signal.org
-    generateDSLForUptime(builder);
+    // TODO(bassosimone): we will need to move richer input to toplevel
+    var input = (0, richerinput_1.newDefaultRicherInput)();
+    // create the DSL
+    var rootNode = (0, generatedsl_1.generateDsl)(input);
     // measure
-    var rootNode = builder.buildRootNode();
-    var testKeys = (0, dsl_1.run)(rootNode, (0, time_1.now)());
-    return testKeys;
+    return (0, dsl_1.run)(rootNode, (0, time_1.now)());
 }
 /** TestKeys contains the signal experiment test keys */
 var TestKeys = /** @class */ (function (_super) {
