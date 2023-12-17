@@ -4,8 +4,6 @@ import { run as dslRun } from "../../dsl"
 
 import { now as timeNow } from "../../../golang/time"
 
-import { ArchivalObservations } from "../../model/archival"
-
 import {
 	WebObservation,
 	WebObservationsContainter,
@@ -13,9 +11,11 @@ import {
 	filterByTargetTag
 } from "../../micropipeline"
 
-import { newDefaultRicherInput } from "./richerinput"
+import { RicherInput, newDefaultRicherInput } from "./richerinput"
 
 import { generateDsl } from "./generatedsl"
+
+import { TestKeys } from "./testkeys"
 
 /** Returns the signal experiment name. */
 export function experimentName() {
@@ -27,45 +27,15 @@ export function experimentVersion() {
 	return "0.3.0"
 }
 
-// TODO(bassosimone): we should use richer input here
-const tagTargetCdsi = "cdsi"
-
-const tagTargetChat = "chat"
-
-const tagTargetSfuVoip = "sfu_voip"
-
-const tagTargetStorage = "storage"
-
-function measure(): ArchivalObservations {
-	// TODO(bassosimone): we will need to move richer input to toplevel
-	const input = newDefaultRicherInput()
-
+function measure(input: RicherInput): TestKeys {
 	// create the DSL
 	const rootNode = generateDsl(input)
 
 	// measure
-	return dslRun(rootNode, timeNow())
+	return new TestKeys(dslRun(rootNode, timeNow()))
 }
 
-/** TestKeys contains the signal experiment test keys */
-export class TestKeys extends ArchivalObservations {
-	signal_backend_status: string = "ok"
-	signal_backend_failure: string | null = null
-
-	constructor(obs: ArchivalObservations) {
-		// make sure we create the superclass first
-		super()
-
-		// then copy from superclass instance
-		this.network_events = obs.network_events
-		this.queries = obs.queries
-		this.requests = obs.requests
-		this.tcp_connect = obs.tcp_connect
-		this.tls_handshakes = obs.tls_handshakes
-		this.quic_handshakes = obs.quic_handshakes
-	}
-}
-
+/* TODO(bassosimone): this function should be a method of TestKeys. */
 function analyzeWithTag(testKeys: TestKeys, linear: WebObservation[], tag: string) {
 	if (testKeys.signal_backend_failure !== null && testKeys.signal_backend_failure !== undefined) {
 		return
@@ -95,7 +65,7 @@ function analyzeWithTag(testKeys: TestKeys, linear: WebObservation[], tag: strin
 	testKeys.signal_backend_failure = first.failure
 }
 
-function analyze(testKeys: TestKeys) {
+function analyze(input: RicherInput, testKeys: TestKeys) {
 	// create the linear analysis to use as the starting point for determining
 	// whether the signal backend has been blocked or not
 	const container = new WebObservationsContainter()
@@ -103,10 +73,9 @@ function analyze(testKeys: TestKeys) {
 	const linear = container.linearize()
 
 	// analyze each signal-backend service that we measure
-	analyzeWithTag(testKeys, linear, tagTargetCdsi)
-	analyzeWithTag(testKeys, linear, tagTargetChat)
-	analyzeWithTag(testKeys, linear, tagTargetSfuVoip)
-	analyzeWithTag(testKeys, linear, tagTargetStorage)
+	for (const entry of input.https_targets) {
+		analyzeWithTag(testKeys, linear, entry.targetTag)
+	}
 
 	// emit analysis results
 	console.log(`signal_backend_status: ${testKeys.signal_backend_status}`)
@@ -115,11 +84,14 @@ function analyze(testKeys: TestKeys) {
 
 /** Runs the signal experiment and returns JSON serialized test keys. */
 export function run() {
+	// create default richer input
+	const input = newDefaultRicherInput()
+
 	// measure
-	const testKeys = new TestKeys(measure())
+	const testKeys = measure(input)
 
 	// analyze
-	analyze(testKeys)
+	analyze(input, testKeys)
 
 	// produce result
 	return JSON.stringify(testKeys)

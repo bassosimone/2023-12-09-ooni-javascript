@@ -1,27 +1,12 @@
 "use strict";
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.run = exports.TestKeys = exports.experimentVersion = exports.experimentName = void 0;
+exports.run = exports.experimentVersion = exports.experimentName = void 0;
 var dsl_1 = require("../../dsl");
 var time_1 = require("../../../golang/time");
-var archival_1 = require("../../model/archival");
 var micropipeline_1 = require("../../micropipeline");
 var richerinput_1 = require("./richerinput");
 var generatedsl_1 = require("./generatedsl");
+var testkeys_1 = require("./testkeys");
 /** Returns the signal experiment name. */
 function experimentName() {
     return "signal";
@@ -32,39 +17,13 @@ function experimentVersion() {
     return "0.3.0";
 }
 exports.experimentVersion = experimentVersion;
-// TODO(bassosimone): we should use richer input here
-var tagTargetCdsi = "cdsi";
-var tagTargetChat = "chat";
-var tagTargetSfuVoip = "sfu_voip";
-var tagTargetStorage = "storage";
-function measure() {
-    // TODO(bassosimone): we will need to move richer input to toplevel
-    var input = (0, richerinput_1.newDefaultRicherInput)();
+function measure(input) {
     // create the DSL
     var rootNode = (0, generatedsl_1.generateDsl)(input);
     // measure
-    return (0, dsl_1.run)(rootNode, (0, time_1.now)());
+    return new testkeys_1.TestKeys((0, dsl_1.run)(rootNode, (0, time_1.now)()));
 }
-/** TestKeys contains the signal experiment test keys */
-var TestKeys = /** @class */ (function (_super) {
-    __extends(TestKeys, _super);
-    function TestKeys(obs) {
-        // make sure we create the superclass first
-        var _this = _super.call(this) || this;
-        _this.signal_backend_status = "ok";
-        _this.signal_backend_failure = null;
-        // then copy from superclass instance
-        _this.network_events = obs.network_events;
-        _this.queries = obs.queries;
-        _this.requests = obs.requests;
-        _this.tcp_connect = obs.tcp_connect;
-        _this.tls_handshakes = obs.tls_handshakes;
-        _this.quic_handshakes = obs.quic_handshakes;
-        return _this;
-    }
-    return TestKeys;
-}(archival_1.ArchivalObservations));
-exports.TestKeys = TestKeys;
+/* TODO(bassosimone): this function should be a method of TestKeys. */
 function analyzeWithTag(testKeys, linear, tag) {
     if (testKeys.signal_backend_failure !== null && testKeys.signal_backend_failure !== undefined) {
         return;
@@ -88,27 +47,29 @@ function analyzeWithTag(testKeys, linear, tag) {
     testKeys.signal_backend_status = "blocked";
     testKeys.signal_backend_failure = first.failure;
 }
-function analyze(testKeys) {
+function analyze(input, testKeys) {
     // create the linear analysis to use as the starting point for determining
     // whether the signal backend has been blocked or not
     var container = new micropipeline_1.WebObservationsContainter();
     container.ingestArchivalObservations(testKeys);
     var linear = container.linearize();
     // analyze each signal-backend service that we measure
-    analyzeWithTag(testKeys, linear, tagTargetCdsi);
-    analyzeWithTag(testKeys, linear, tagTargetChat);
-    analyzeWithTag(testKeys, linear, tagTargetSfuVoip);
-    analyzeWithTag(testKeys, linear, tagTargetStorage);
+    for (var _i = 0, _a = input.https_targets; _i < _a.length; _i++) {
+        var entry = _a[_i];
+        analyzeWithTag(testKeys, linear, entry.targetTag);
+    }
     // emit analysis results
     console.log("signal_backend_status: ".concat(testKeys.signal_backend_status));
     console.log("signal_backend_failure: ".concat(testKeys.signal_backend_failure));
 }
 /** Runs the signal experiment and returns JSON serialized test keys. */
 function run() {
+    // create default richer input
+    var input = (0, richerinput_1.newDefaultRicherInput)();
     // measure
-    var testKeys = new TestKeys(measure());
+    var testKeys = measure(input);
     // analyze
-    analyze(testKeys);
+    analyze(input, testKeys);
     // produce result
     return JSON.stringify(testKeys);
 }
