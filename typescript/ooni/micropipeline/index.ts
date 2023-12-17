@@ -1,4 +1,4 @@
-import { ArchivalObservations, DnsLookupResult, HttpRequestResult, TcpConnectResult, TlsHandshakeResult } from "../../model/archival"
+import { ArchivalObservations, DnsLookupResult, HttpRequestResult, TcpConnectResult, TlsHandshakeResult } from "../../ooni/model/archival"
 
 /** The last operation in a WebOservation is DNS lookup. */
 const TypeDNSLookup = 0
