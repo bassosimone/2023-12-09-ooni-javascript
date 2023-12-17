@@ -1,0 +1,9 @@
+{
+	"compilerOptions": {
+		"rootDir": "typescript",
+		"outDir": "javascript",
+		"target": "ES5",
+		"module": "Node16",
+		"strict": true
+	}
+}

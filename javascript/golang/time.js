@@ -1,7 +1,9 @@
-"use strict"
-
-const _golang = require("_golang")
-
-exports.now = function () {
-    return _golang.timeNow()
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.now = void 0;
+// @ts-ignore
+var _golang_1 = require("_golang");
+function now() {
+    return (0, _golang_1.timeNow)();
 }
+exports.now = now;
