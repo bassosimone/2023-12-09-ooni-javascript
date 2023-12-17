@@ -16,7 +16,7 @@ exports.optionTags = function (...tags) {
 }
 
 /** Sets the root CAs to be used by TLS. */
-exports.tlsOptionRootCAs = function (...certs) {
+exports.tlsHandshakeOptionRootCAs = function (...certs) {
     return function (stage) {
         stage.value.root_cas.push(...certs)
     }
@@ -126,7 +126,7 @@ exports.Builder = class {
             }
         })
     }
-    
+
     /** Adds a tee_addrs type node to the DSL. */
     teeAddrs(input, ...callbacks) {
         // create the stage

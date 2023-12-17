@@ -86,8 +86,12 @@ function generateDslForHTTPS(builder, domain, tag) {
     const tcpConnections = builder.tcpConnect(endpoints, dsl.optionTags(tag))
 
     // perform TLS handshakes with the custom root CAs
-    const tlsConnections = builder.tlsHandshake(domain, ["h2", "http/1.1"], tcpConnections,
-        dsl.tlsOptionRootCAs(signalCA, signalCANew))
+    const tlsConnections = builder.tlsHandshake(
+		domain,
+		["h2", "http/1.1"],
+		tcpConnections,
+        dsl.tlsHandshakeOptionRootCAs(signalCA, signalCANew),
+	)
 
     // perform HTTP round trips
     builder.httpRoundTrip(domain, tlsConnections)
