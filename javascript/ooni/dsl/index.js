@@ -13,7 +13,7 @@ Object.defineProperty(exports, "tlsHandshakeOptionRootCAs", { enumerable: true, 
 var _ooni_1 = require("_ooni");
 /** Runs a DSL with the given DSL @p rootNode and @p zeroTime. */
 function run(rootNode, zeroTime) {
-    var tk = (0, _ooni_1.runDSL)(rootNode, zeroTime);
+    var tk = (0, _ooni_1.runDSL)(rootNode, zeroTime.v);
     return JSON.parse(tk);
 }
 exports.run = run;
