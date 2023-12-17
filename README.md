@@ -81,7 +81,7 @@ const signal = require("ooni/experiment/signal")
 
 console.log(signal.experimentName())
 console.log(signal.experimentVersion())
-console.log(signal.run())
+console.log(signal.run(""))
 ```
 
 save it as `main.js` and run it using:
