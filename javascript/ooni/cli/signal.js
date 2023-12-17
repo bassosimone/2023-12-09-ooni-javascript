@@ -2,4 +2,4 @@
 
 const signal = require("ooni/experiment/signal")
 const tk = signal.run()
-console.log("MEASUREMENT", JSON.stringify(tk))
+console.log("MEASUREMENT:", tk)

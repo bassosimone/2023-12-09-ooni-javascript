@@ -1,17 +1,17 @@
 "use strict"
 
-const analysis = require("ooni/analysis")
 const dsl = require("ooni/dsl")
+const micropipeline = require("ooni/micropipeline")
 const time = require("golang/time")
 
 /** Returns the experiment name. */
 exports.experimentName = function () {
-    return "signal"
+	return "signal"
 }
 
 /** Returns the experiment version. */
 exports.experimentVersion = function () {
-    return "0.3.0"
+	return "0.3.0"
 }
 
 const signalCA = `-----BEGIN CERTIFICATE-----
@@ -76,100 +76,120 @@ Lrsybb0z5gg8w7ZblEuB9zOW9M3l60DXuJO6l7g+deV6P96rv2unHS8UlvWiVWDy
 -----END CERTIFICATE-----`
 
 function generateDslForHTTPS(builder, domain, tag) {
-    // obtain IP addrs from the domain name
-    const addrs = builder.getaddrinfo(domain, dsl.getaddrinfoOptionTags(tag))
+	// properly transform the tag into a key=value format
+	tag = `target=${tag}`
 
-    // map addrs to endpoints
-    const endpoints = builder.makeEndpoints("443", addrs)
+	// obtain IP addrs from the domain name
+	const addrs = builder.getaddrinfo(domain, dsl.getaddrinfoOptionTags(tag))
 
-    // establish TCP connections
-    const tcpConnections = builder.tcpConnect(endpoints, dsl.tcpConnectOptionTags(tag))
+	// map addrs to endpoints
+	const endpoints = builder.makeEndpoints("443", addrs)
 
-    // perform TLS handshakes with the custom root CAs
-    const tlsConnections = builder.tlsHandshake(
+	// establish TCP connections
+	const tcpConnections = builder.tcpConnect(endpoints, dsl.tcpConnectOptionTags(tag))
+
+	// perform TLS handshakes with the custom root CAs
+	const tlsConnections = builder.tlsHandshake(
 		domain,
 		["h2", "http/1.1"],
 		tcpConnections,
-        dsl.tlsHandshakeOptionRootCAs(signalCA, signalCANew),
+		dsl.tlsHandshakeOptionRootCAs(signalCA, signalCANew),
 	)
 
-    // perform HTTP round trips
-    builder.httpRoundTrip(domain, tlsConnections)
+	// make sure we use juse a single connection for the HTTP round trip
+	const firstConn = builder.takeN(1, tlsConnections)
+
+	// perform HTTP round trips
+	builder.httpRoundTrip(domain, firstConn)
 }
 
 function generateDSLForUptime(builder) {
-    // obtain IP adds from the domain name
-    const addrs = builder.getaddrinfo("uptime.signal.org")
+	// obtain IP adds from the domain name
+	const addrs = builder.getaddrinfo("uptime.signal.org")
 
-    // drop the results since we don't need to do anything with them
-    builder.drop(addrs)
+	// drop the results since we don't need to do anything with them
+	builder.drop(addrs)
 }
 
-const tagTargetCdsi = "target=cdsi"
+const tagTargetCdsi = "cdsi"
 
-const tagTargetChat = "target=chat"
+const tagTargetChat = "chat"
 
-const tagTargetSfuVoip = "target=sfu_voip"
+const tagTargetSfuVoip = "sfu_voip"
 
-const tagTargetStorage = "target=storage"
+const tagTargetStorage = "storage"
 
 function measure() {
-    // create the builder
-    const builder = new dsl.Builder()
+	// create the builder
+	const builder = new dsl.Builder()
 
-    // build DSL for HTTPS
-    generateDslForHTTPS(builder, "cdsi.signal.org", tagTargetCdsi)
-    generateDslForHTTPS(builder, "chat.signal.org", tagTargetChat)
-    generateDslForHTTPS(builder, "sfu.voip.signal.org", tagTargetSfuVoip)
-    generateDslForHTTPS(builder, "storage.signal.org", tagTargetStorage)
+	// build DSL for HTTPS
+	generateDslForHTTPS(builder, "cdsi.signal.org", tagTargetCdsi)
+	generateDslForHTTPS(builder, "chat.signal.org", tagTargetChat)
+	generateDslForHTTPS(builder, "sfu.voip.signal.org", tagTargetSfuVoip)
+	generateDslForHTTPS(builder, "storage.signal.org", tagTargetStorage)
 
-    // build DSL for uptime.signal.org
-    generateDSLForUptime(builder)
+	// build DSL for uptime.signal.org
+	generateDSLForUptime(builder)
 
-    // measure
-    const rootNode = builder.buildRootNode()
-    const timeNow = time.now()
-    const testKeys = dsl.run(rootNode, timeNow)
+	// measure
+	const rootNode = builder.buildRootNode()
+	const timeNow = time.now()
+	const testKeys = dsl.run(rootNode, timeNow)
 
-    return testKeys
+	return testKeys
 }
 
-function analyzeWithTag(testKeys, observations, tag) {
-    if (testKeys.signal_backend_failure !== null && testKeys.signal_backend_failure !== undefined) {
-        return
-    }
+function analyzeWithTag(testKeys, linear, tag) {
+	if (testKeys.signal_backend_failure !== null && testKeys.signal_backend_failure !== undefined) {
+		return
+	}
 
-    const first = analysis.firstMiniObservationWithTargetTag(observations, tag)
-    if (first === undefined || first === null) {
-        return
-    }
-    if (first.failure === undefined || first.failure === null) {
-        return
-    }
+	// only keep observations relevant for the current tag we're analyzing
+	const filtered = micropipeline.filterByTargetTag(linear, tag)
 
-    observations.signal_backend_status = "blocked"
-    observations.signal_backend_failure = first.failure
+	// sort such that HTTP and successes bubble up first
+	micropipeline.sortByTypeAndFailure(filtered)
+
+	// if there's nothing to analyze, do nothing (is this a bug?!)
+	if (filtered.length <= 0) {
+		return
+	}
+
+	// the first entry should be the most important operation of the measurement
+	// tyically HTTP in the successful case and a success if possible
+	const first = filtered[0]
+	if (first.failure === undefined || first.failure === null) {
+		return
+	}
+
+	// if there is a failure, it means we were not able to reach the HTTP and
+	// success state for this tag, so let's mark the backend as blocked
+	observations.signal_backend_status = "blocked"
+	observations.signal_backend_failure = first.failure
 }
 
 function analyze(testKeys) {
-    testKeys.signal_backend_status = "ok"
-    testKeys.signal_backend_failure = null
+	testKeys.signal_backend_status = "ok"
+	testKeys.signal_backend_failure = null
 
-    const observations = analysis.makeMiniObservations(testKeys)
+	const container = new micropipeline.WebObservationsContainter()
+	container.ingestArchivalObservations(testKeys)
+	const linear = container.linearize()
 
-    analyzeWithTag(observations, tagTargetCdsi)
-    analyzeWithTag(observations, tagTargetChat)
-    analyzeWithTag(observations, tagTargetSfuVoip)
-    analyzeWithTag(observations, tagTargetStorage)
+	analyzeWithTag(linear, tagTargetCdsi)
+	analyzeWithTag(linear, tagTargetChat)
+	analyzeWithTag(linear, tagTargetSfuVoip)
+	analyzeWithTag(linear, tagTargetStorage)
 }
 
 exports.run = function () {
-    // measure
-    const testKeys = measure()
+	// measure
+	const testKeys = measure()
 
-    // analyze
-    analyze(testKeys)
+	// analyze
+	analyze(testKeys)
 
-    // produce result
-    return JSON.stringify(testKeys)
+	// produce result
+	return JSON.stringify(testKeys)
 }
