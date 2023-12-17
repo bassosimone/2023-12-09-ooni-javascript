@@ -77,13 +77,13 @@ Lrsybb0z5gg8w7ZblEuB9zOW9M3l60DXuJO6l7g+deV6P96rv2unHS8UlvWiVWDy
 
 function generateDslForHTTPS(builder, domain, tag) {
     // obtain IP addrs from the domain name
-    const addrs = builder.getaddrinfo(domain, dsl.optionTags(tag))
+    const addrs = builder.getaddrinfo(domain, dsl.getaddrinfoOptionTags(tag))
 
     // map addrs to endpoints
     const endpoints = builder.makeEndpoints("443", addrs)
 
     // establish TCP connections
-    const tcpConnections = builder.tcpConnect(endpoints, dsl.optionTags(tag))
+    const tcpConnections = builder.tcpConnect(endpoints, dsl.tcpConnectOptionTags(tag))
 
     // perform TLS handshakes with the custom root CAs
     const tlsConnections = builder.tlsHandshake(

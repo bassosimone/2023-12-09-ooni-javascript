@@ -8,8 +8,15 @@ exports.run = function (rootNode, zeroTime) {
     return JSON.parse(rawObservations)
 }
 
-/** Sets tags for a given DLS node. */
-exports.optionTags = function (...tags) {
+/** Sets tags for a given getaddrinfo node. */
+exports.getaddrinfoOptionTags = function (...tags) {
+    return function (stage) {
+        stage.value.tags.push(...tags)
+    }
+}
+
+/** Sets tags for a given tcp_connect node. */
+exports.tcpConnectOptionTags = function (...tags) {
     return function (stage) {
         stage.value.tags.push(...tags)
     }
