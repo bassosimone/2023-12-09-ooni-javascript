@@ -196,16 +196,17 @@ internal OONI Probe packages. We import these packages:
 
 We use [dop251/goja](https://github.com/dop251/goja) as the JavaScript engine.
 
-The [javascript](javascript) directory contains JavaScript code:
+The [typescript](typescript) directory contains TypeScript code from which we generate the
+corresponding JavaScript code inside [javascript](javascript) code.
 
-* [javascript/golang](javascript/golang/) contains wrappers to invoke
-Go functions from JavaScript;
+* [typescript/golang](typescript/golang/) contains wrappers to invoke
+Go functions from TypeScript;
 
-* [javascript/ooni/experiment](javascript/ooni/experiment/) contains
-the JavaScript implementation of OONI experiments;
+* [typescript/ooni/experiment](typescript/ooni/experiment/) contains
+the TypeScript implementation of OONI experiments;
 
-* [javascript/ooni/analysis.js](javascript/ooni/analysis.js) implements
-analyzing OONI measurements;
+* [typescript/ooni/micropipeline](typescript/ooni/micropipeline) functionality
+to analyze OONI measurements;
 
-* [javascript/ooni/dsl.js](javascript/ooni/dsl.js) allows to create
+* [typescript/ooni/dsl](typescript/ooni/dsl) allows to create
 and run a JSON-encoded DSL using JavaScript code.
