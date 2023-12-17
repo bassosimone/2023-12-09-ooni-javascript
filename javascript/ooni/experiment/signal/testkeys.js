@@ -16,6 +16,7 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TestKeys = void 0;
+var micropipeline_1 = require("../../micropipeline");
 var archival_1 = require("../../model/archival");
 /** TestKeys contains the signal experiment test keys */
 var TestKeys = /** @class */ (function (_super) {
@@ -34,6 +35,30 @@ var TestKeys = /** @class */ (function (_super) {
         _this.quic_handshakes = obs.quic_handshakes;
         return _this;
     }
+    /** Updates the test keys by selecting the observations for the given tag. */
+    TestKeys.prototype.updateForTag = function (linear, tag) {
+        if (this.signal_backend_failure !== null && this.signal_backend_failure !== undefined) {
+            return;
+        }
+        // only keep observations relevant for the current tag we're analyzing
+        var filtered = (0, micropipeline_1.filterByTargetTag)(linear, tag);
+        // sort such that HTTP and successes bubble up first
+        (0, micropipeline_1.sortByTypeAndFailure)(filtered);
+        // if there's nothing to analyze, do nothing (is this a bug?!)
+        if (filtered.length <= 0) {
+            return;
+        }
+        // the first entry should be the most important operation of the measurement
+        // tyically HTTP in the successful case and a success if possible
+        var first = filtered[0];
+        if (first.failure === undefined || first.failure === null) {
+            return;
+        }
+        // if there is a failure, it means we were not able to reach the HTTP and
+        // success state for this tag, so let's mark the backend as blocked
+        this.signal_backend_status = "blocked";
+        this.signal_backend_failure = first.failure;
+    };
     return TestKeys;
 }(archival_1.ArchivalObservations));
 exports.TestKeys = TestKeys;

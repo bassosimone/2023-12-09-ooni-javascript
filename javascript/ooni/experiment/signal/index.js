@@ -23,30 +23,6 @@ function measure(input) {
     // measure
     return new testkeys_1.TestKeys((0, dsl_1.run)(rootNode, (0, time_1.now)()));
 }
-/* TODO(bassosimone): this function should be a method of TestKeys. */
-function analyzeWithTag(testKeys, linear, tag) {
-    if (testKeys.signal_backend_failure !== null && testKeys.signal_backend_failure !== undefined) {
-        return;
-    }
-    // only keep observations relevant for the current tag we're analyzing
-    var filtered = (0, micropipeline_1.filterByTargetTag)(linear, tag);
-    // sort such that HTTP and successes bubble up first
-    (0, micropipeline_1.sortByTypeAndFailure)(filtered);
-    // if there's nothing to analyze, do nothing (is this a bug?!)
-    if (filtered.length <= 0) {
-        return;
-    }
-    // the first entry should be the most important operation of the measurement
-    // tyically HTTP in the successful case and a success if possible
-    var first = filtered[0];
-    if (first.failure === undefined || first.failure === null) {
-        return;
-    }
-    // if there is a failure, it means we were not able to reach the HTTP and
-    // success state for this tag, so let's mark the backend as blocked
-    testKeys.signal_backend_status = "blocked";
-    testKeys.signal_backend_failure = first.failure;
-}
 function analyze(input, testKeys) {
     // create the linear analysis to use as the starting point for determining
     // whether the signal backend has been blocked or not
@@ -56,7 +32,7 @@ function analyze(input, testKeys) {
     // analyze each signal-backend service that we measure
     for (var _i = 0, _a = input.https_targets; _i < _a.length; _i++) {
         var entry = _a[_i];
-        analyzeWithTag(testKeys, linear, entry.targetTag);
+        testKeys.updateForTag(linear, entry.targetTag);
     }
     // emit analysis results
     console.log("signal_backend_status: ".concat(testKeys.signal_backend_status));
