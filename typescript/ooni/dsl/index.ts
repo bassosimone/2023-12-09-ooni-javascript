@@ -12,9 +12,10 @@ import { runDSL as __ooniRunDsl } from "_ooni"
 import { RootNode } from "./builder";
 
 import { Time } from "../../golang/time"
+import { ArchivalObservations } from "../../model/archival";
 
 /** Runs a DSL with the given DSL @p rootNode and @p zeroTime. */
-export function run(rootNode: RootNode, zeroTime: Time) {
+export function run(rootNode: RootNode, zeroTime: Time): ArchivalObservations {
     const tk = __ooniRunDsl(rootNode, zeroTime.v)
     return JSON.parse(tk)
 }
