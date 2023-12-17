@@ -1,5 +1,3 @@
-"use strict"
-
 import { run as dslRun } from "../../dsl"
 
 import { now as timeNow } from "../../../golang/time"
