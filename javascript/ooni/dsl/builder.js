@@ -57,7 +57,7 @@ var Builder = /** @class */ (function () {
         return new RootNode(this.stages);
     };
     /** Adds a dedup_addrs node to the DSL and returns the output register. */
-    Builder.prototype.dedup_addrs = function () {
+    Builder.prototype.dedupAddrs = function () {
         var inputs = [];
         for (var _i = 0; _i < arguments.length; _i++) {
             inputs[_i] = arguments[_i];
@@ -147,14 +147,19 @@ var Builder = /** @class */ (function () {
         for (var _i = 1; _i < arguments.length; _i++) {
             callbacks[_i - 1] = arguments[_i];
         }
+        // Implementation note: we MUST emit tee_addrs before the subsequent stages
+        // otherwise miniooni 3.20.0 complains that a register is missing.
         var outputs = [];
+        var value = new teeaddrs_1.TeeAddrsValue(input, outputs);
+        this.push("tee_addrs", value);
+        // Now that we have emitted tee_addrs we can proceed with generating the
+        // subsequent stages which will reference the outputs of tee_addrs.
         for (var _a = 0, callbacks_1 = callbacks; _a < callbacks_1.length; _a++) {
             var callback = callbacks_1[_a];
             var output = this.newRegister();
             callback(output);
             outputs.push(output);
         }
-        this.push("tee_addrs", new teeaddrs_1.TeeAddrsValue(input, outputs));
     };
     /** Adds a tls_handshake node to the DSL and returns the output register. */
     Builder.prototype.tlsHandshake = function (serverName, nextProtos, input) {
