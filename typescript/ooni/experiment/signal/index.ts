@@ -1,16 +1,31 @@
 "use strict"
 
-const dsl = require("ooni/dsl")
-const micropipeline = require("ooni/micropipeline")
-const time = require("golang/time")
+import {
+	Builder as DSLBuilder,
+	run as dslRun,
+	getaddrinfoOptionTags,
+	tcpConnectOptionTags,
+	tlsHandshakeOptionRootCAs
+} from "../../dsl"
 
-/** Returns the experiment name. */
-exports.experimentName = function () {
+import { now as timeNow } from "../../../golang/time"
+
+import { ArchivalObservations } from "../../model/archival"
+
+import {
+	WebObservation,
+	WebObservationsContainter,
+	sortByTypeAndFailure,
+	filterByTargetTag
+} from "../../micropipeline"
+
+/** Returns the signal experiment name. */
+export function experimentName() {
 	return "signal"
 }
 
-/** Returns the experiment version. */
-exports.experimentVersion = function () {
+/** Returns the signal experiment version. */
+export function experimentVersion() {
 	return "0.3.0"
 }
 
@@ -75,25 +90,25 @@ Lrsybb0z5gg8w7ZblEuB9zOW9M3l60DXuJO6l7g+deV6P96rv2unHS8UlvWiVWDy
 9qfgAJizyy3kqM4lOwBH
 -----END CERTIFICATE-----`
 
-function generateDslForHTTPS(builder, domain, tag) {
+function generateDslForHTTPS(builder: DSLBuilder, domain: string, tag: string) {
 	// properly transform the tag into a key=value format
 	tag = `target=${tag}`
 
 	// obtain IP addrs from the domain name
-	const addrs = builder.getaddrinfo(domain, dsl.getaddrinfoOptionTags(tag))
+	const addrs = builder.getaddrinfo(domain, getaddrinfoOptionTags(tag))
 
 	// map addrs to endpoints
 	const endpoints = builder.makeEndpoints("443", addrs)
 
 	// establish TCP connections
-	const tcpConnections = builder.tcpConnect(endpoints, dsl.tcpConnectOptionTags(tag))
+	const tcpConnections = builder.tcpConnect(endpoints, tcpConnectOptionTags(tag))
 
 	// perform TLS handshakes with the custom root CAs
 	const tlsConnections = builder.tlsHandshake(
 		domain,
 		["h2", "http/1.1"],
 		tcpConnections,
-		dsl.tlsHandshakeOptionRootCAs(signalCA, signalCANew),
+		tlsHandshakeOptionRootCAs(signalCA, signalCANew),
 	)
 
 	// make sure we use juse a single connection for the HTTP round trip
@@ -103,7 +118,7 @@ function generateDslForHTTPS(builder, domain, tag) {
 	builder.httpRoundTrip(domain, firstConn)
 }
 
-function generateDSLForUptime(builder) {
+function generateDSLForUptime(builder: DSLBuilder) {
 	// obtain IP adds from the domain name
 	const addrs = builder.getaddrinfo("uptime.signal.org")
 
@@ -119,9 +134,9 @@ const tagTargetSfuVoip = "sfu_voip"
 
 const tagTargetStorage = "storage"
 
-function measure() {
+function measure(): ArchivalObservations {
 	// create the builder
-	const builder = new dsl.Builder()
+	const builder = new DSLBuilder()
 
 	// build DSL for HTTPS
 	generateDslForHTTPS(builder, "cdsi.signal.org", tagTargetCdsi)
@@ -134,22 +149,40 @@ function measure() {
 
 	// measure
 	const rootNode = builder.buildRootNode()
-	const timeNow = time.now()
-	const testKeys = dsl.run(rootNode, timeNow)
+	const testKeys = dslRun(rootNode, timeNow())
 
 	return testKeys
 }
 
-function analyzeWithTag(testKeys, linear, tag) {
+/** TestKeys contains the signal experiment test keys */
+export class TestKeys extends ArchivalObservations {
+	signal_backend_status: string = "ok"
+	signal_backend_failure: string | null = null
+
+	constructor(obs: ArchivalObservations) {
+		// make sure we create the superclass first
+		super()
+
+		// then copy from superclass instance
+		this.network_events = obs.network_events
+		this.queries = obs.queries
+		this.requests = obs.requests
+		this.tcp_connect = obs.tcp_connect
+		this.tls_handshakes = obs.tls_handshakes
+		this.quic_handshakes = obs.quic_handshakes
+	}
+}
+
+function analyzeWithTag(testKeys: TestKeys, linear: WebObservation[], tag: string) {
 	if (testKeys.signal_backend_failure !== null && testKeys.signal_backend_failure !== undefined) {
 		return
 	}
 
 	// only keep observations relevant for the current tag we're analyzing
-	const filtered = micropipeline.filterByTargetTag(linear, tag)
+	const filtered = filterByTargetTag(linear, tag)
 
 	// sort such that HTTP and successes bubble up first
-	micropipeline.sortByTypeAndFailure(filtered)
+	sortByTypeAndFailure(filtered)
 
 	// if there's nothing to analyze, do nothing (is this a bug?!)
 	if (filtered.length <= 0) {
@@ -165,27 +198,28 @@ function analyzeWithTag(testKeys, linear, tag) {
 
 	// if there is a failure, it means we were not able to reach the HTTP and
 	// success state for this tag, so let's mark the backend as blocked
-	observations.signal_backend_status = "blocked"
-	observations.signal_backend_failure = first.failure
+	testKeys.signal_backend_status = "blocked"
+	testKeys.signal_backend_failure = first.failure
 }
 
-function analyze(testKeys) {
-	testKeys.signal_backend_status = "ok"
-	testKeys.signal_backend_failure = null
-
-	const container = new micropipeline.WebObservationsContainter()
+function analyze(testKeys: TestKeys) {
+	// create the linear analysis to use as the starting point for determining
+	// whether the signal backend has been blocked or not
+	const container = new WebObservationsContainter()
 	container.ingestArchivalObservations(testKeys)
 	const linear = container.linearize()
 
-	analyzeWithTag(linear, tagTargetCdsi)
-	analyzeWithTag(linear, tagTargetChat)
-	analyzeWithTag(linear, tagTargetSfuVoip)
-	analyzeWithTag(linear, tagTargetStorage)
+	// analyze each signal-backend service that we measure
+	analyzeWithTag(testKeys, linear, tagTargetCdsi)
+	analyzeWithTag(testKeys, linear, tagTargetChat)
+	analyzeWithTag(testKeys, linear, tagTargetSfuVoip)
+	analyzeWithTag(testKeys, linear, tagTargetStorage)
 }
 
-exports.run = function () {
+/** Runs the signal experiment and returns JSON serialized test keys. */
+export function run() {
 	// measure
-	const testKeys = measure()
+	const testKeys = new TestKeys(measure())
 
 	// analyze
 	analyze(testKeys)
